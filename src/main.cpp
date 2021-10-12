@@ -1,10 +1,17 @@
 #include <Arduino.h>
-#include <TFT_eSPI.h>
-#include <SPI.h>
+// #include <TFT_eSPI.h>
+// #include <SPI.h>
 #if defined(ESP32)
-#include <SPIFFS.h>
+// #include <SPIFFS.h>
 #include "arduino-drivers/esp32/audio/audio.h"
 #endif
+
+#include <Wire.h>
+// #include <../teensy41_extram/extRAM_t4/src/extRAM_t4.h>
+#include <../teensy41_extram/SPIFFS_t4/src/spiffs_t4.h>
+#include <../teensy41_extram/SPIFFS_t4/src/spiffs.h>
+
+spiffs_t4 eRAM;
 
 extern "C" {
 #include "uxn.h"
@@ -16,13 +23,14 @@ extern "C" {
 
 // Config
 
-static char *rom = (char *)"/spiffs/audio.rom";
+spiffs_file romFile;
+static char *rom = (char *)"/bin/life.rom";
 const int hor = 40, ver = 30;
-
+ 
 // *******
 
-TFT_eSPI tft = TFT_eSPI();
-TFT_eSprite spr = TFT_eSprite(&tft);
+// TFT_eSPI tft = TFT_eSPI();
+// TFT_eSprite spr = TFT_eSprite(&tft);
 
 #define POLYPHONY 4
 
@@ -60,7 +68,7 @@ clamp(int val, int min, int max)
 static void 
 quit()
 {
-	tft.fillScreen(TFT_BLACK);
+	// tft.fillScreen(TFT_BLACK);
 	while(true)
 		delay(1000);
 }
@@ -113,7 +121,7 @@ redraw(Uxn* u)
 {
 	if(devsystem->dat[0xe])
 		inspect(ppu, u->wst.dat, u->wst.ptr, u->rst.ptr, u->ram.dat);
-	spr.pushSprite(0, 0);
+	// spr.pushSprite(0, 0);
 	reqdraw = 0;
 }
 
@@ -122,9 +130,9 @@ uxn_init(void)
 {
 	if(!ppu_init(ppu, hor, ver))
 		error("PPU", "Init failure");
-	if(!initaudio(audio_callback))
-		error("Audio", "Init failure");
-	ppu->pixels = (Uint8*)spr.getPointer();
+	// if(!initaudio(audio_callback))
+	// 	error("Audio", "Init failure");
+	// ppu->pixels = (Uint8*)spr.getPointer();
 	return 1;
 }
 
@@ -150,15 +158,15 @@ system_talk(Device *d, Uint8 b0, Uint8 w)
 			r[i] = ((d->dat[0x8 + i / 2] >> (!(i % 2) << 2)) & 0x0f) * 0x11;
 			g[i] = ((d->dat[0xa + i / 2] >> (!(i % 2) << 2)) & 0x0f) * 0x11;
 			b[i] = ((d->dat[0xc + i / 2] >> (!(i % 2) << 2)) & 0x0f) * 0x11;
-			pal[i] = spr.color565(r[i], g[i], b[i]);
+			// pal[i] = spr.color565(r[i], g[i], b[i]);
 		}
 		for(i = 4; i < 16; ++i) {
 			r[i] = r[i / 4];
 			g[i] = g[i / 4];
 			b[i] = b[i / 4];
-			pal[i] = spr.color565(r[i], g[i], b[i]);
+			// pal[i] = spr.color565(r[i], g[i], b[i]);
 		}
-		spr.createPalette(pal);
+		// spr.createPalette(pal);
 		reqdraw = 1;
 	} else if(b0 == 0xf)
 		d->u->ram.ptr = 0x0000;
@@ -167,8 +175,8 @@ system_talk(Device *d, Uint8 b0, Uint8 w)
 static void
 console_talk(Device *d, Uint8 b0, Uint8 w)
 {
-	if(w && b0 > 0x7)
-		write(b0 - 0x7, (char *)&d->dat[b0], 1);
+	// if(w && b0 > 0x7)
+	// 	write(b0 - 0x7, (char *)&d->dat[b0], 1);
 }
 
 static void
@@ -193,28 +201,28 @@ screen_talk(Device *d, Uint8 b0, Uint8 w)
 	}
 }
 
-static void
-audio_talk(Device *d, Uint8 b0, Uint8 w)
-{
-	Apu *c = apu[d - devaudio0];
-	#warning Replace the following line by something else if we can't open the I2S sound output ?
-	//if(!audio_id) return;
-	if(!w) {
-		if(b0 == 0x2)
-			mempoke16(d->dat, 0x2, c->i);
-		else if(b0 == 0x4)
-			d->dat[0x4] = apu_get_vu(c);
-	} else if(b0 == 0xf) {
-		audio_lock();
-		c->len = mempeek16(d->dat, 0xa);
-		c->addr = &d->mem[mempeek16(d->dat, 0xc)];
-		c->volume[0] = d->dat[0xe] >> 4;
-		c->volume[1] = d->dat[0xe] & 0xf;
-		c->repeat = !(d->dat[0xf] & 0x80);
-		apu_start(c, mempeek16(d->dat, 0x8), d->dat[0xf] & 0x7f);
-		audio_unlock();
-	}
-}
+// static void
+// audio_talk(Device *d, Uint8 b0, Uint8 w)
+// {
+// 	Apu *c = apu[d - devaudio0];
+// 	#warning Replace the following line by something else if we can't open the I2S sound output ?
+// 	//if(!audio_id) return;
+// 	if(!w) {
+// 		if(b0 == 0x2)
+// 			mempoke16(d->dat, 0x2, c->i);
+// 		else if(b0 == 0x4)
+// 			d->dat[0x4] = apu_get_vu(c);
+// 	} else if(b0 == 0xf) {
+// 		audio_lock();
+// 		c->len = mempeek16(d->dat, 0xa);
+// 		c->addr = &d->mem[mempeek16(d->dat, 0xc)];
+// 		c->volume[0] = d->dat[0xe] >> 4;
+// 		c->volume[1] = d->dat[0xe] & 0xf;
+// 		c->repeat = !(d->dat[0xf] & 0x80);
+// 		apu_start(c, mempeek16(d->dat, 0x8), d->dat[0xf] & 0x7f);
+// 		audio_unlock();
+// 	}
+// }
 
 /*
 
@@ -306,9 +314,10 @@ static int
 load(Uxn *u, char *filepath)
 {
 	FILE *f;
-	if(!(f = fopen(filepath, "rb")))
-		return 0;
-	fread(u->ram.dat + PAGE_PROGRAM, sizeof(u->ram.dat) - PAGE_PROGRAM, 1, f);
+	// if(!(f = eRAM.f_open(romFile, filepath)))
+	// 	return 0;
+	eRAM.f_open(romFile, filepath, SPIFFS_RDONLY);
+	eRAM.f_read(romFile, u->ram.dat + PAGE_PROGRAM, sizeof(u->ram.dat) - PAGE_PROGRAM);
 	fprintf(stderr, "Loaded %s\n", filepath);
 	return 1;
 }
@@ -317,20 +326,50 @@ void
 setup()
 {
 	Serial.begin(115200);
-	tft.init();
-	tft.setRotation(3);
-	tft.fillScreen(TFT_BLACK);
-	tft.setCursor(0, 0);
-	tft.setTextColor(TFT_GREEN);
-	spr.setColorDepth(4);
-	if(spr.createSprite(8 * hor, 8 * ver) == nullptr) {
-		error("tTFT_eSPI", "Cannot create sprite");
-		quit();
-	}
 
-#if defined(ESP32)
-	SPIFFS.begin();
+	// Setup PSRAM
+#if 1
+  Serial.println("\n Enter 'y' in 6 seconds to format FlashChip - other to skip");
+  uint32_t pauseS = millis();
+  char chIn = 9;
+  while ( pauseS + 6000 > millis() && 9 == chIn ) {
+    if ( Serial.available() ) {
+      do {
+        if ( chIn != 'y' )
+          chIn = Serial.read();
+        else
+          Serial.read();
+      }
+      while ( Serial.available() );
+    }
+  }
+  if ( chIn == 'y' ) {
+    // int8_t result = eRAM.begin(INIT_PSRAM_ONLY);
+    // if(result == 0){
+    //   eRAM.eraseFlashChip();
+    // } else {
+	eRAM.begin();
+      eRAM.eraseFlashChip();
+    // }
+  }
 #endif
+	// tft.init();
+	// tft.setRotation(3);
+	// tft.fillScreen(TFT_BLACK);
+	// tft.setCursor(0, 0);
+	// tft.setTextColor(TFT_GREEN);
+	// spr.setColorDepth(4);
+	// if(spr.createSprite(8 * hor, 8 * ver) == nullptr) {
+	// 	error("tTFT_eSPI", "Cannot create sprite");
+	// 	quit();
+	// }
+
+// #if defined(ESP32)
+// 	SPIFFS.begin();
+// #endif
+
+	eRAM.begin(); // 0 - init eram only, 1-init flash only, 2-init both
+  	eRAM.fs_mount();
 
 	if((u = (Uxn *)malloc(sizeof(Uxn))) == nullptr)
 		error("Memory", "Cannot allocate enough memory for uxn");
@@ -352,10 +391,10 @@ setup()
 	devsystem = uxn_port(u, 0x0, (char *)"system", system_talk);
 	devconsole = uxn_port(u, 0x1, (char *)"console", console_talk);
 	devscreen = uxn_port(u, 0x2, (char *)"screen", screen_talk);
-	devaudio0 = uxn_port(u, 0x3, (char *)"audio0", audio_talk);
-	uxn_port(u, 0x4, (char *)"audio1", audio_talk);
-	uxn_port(u, 0x5, (char *)"audio2", audio_talk);
-	uxn_port(u, 0x6, (char *)"audio3", audio_talk);
+	devaudio0 = uxn_port(u, 0x3, (char *)"audio0", nil_talk);
+	uxn_port(u, 0x4, (char *)"audio1", nil_talk);
+	uxn_port(u, 0x5, (char *)"audio2", nil_talk);
+	uxn_port(u, 0x6, (char *)"audio3", nil_talk);
 	uxn_port(u, 0x7, (char *)"---", nil_talk);
 	uxn_port(u, 0x8, (char *)"---", nil_talk);
 	devmouse = uxn_port(u, 0x9, (char *)"mouse", nil_talk);
@@ -366,10 +405,10 @@ setup()
 	uxn_port(u, 0xe, (char *)"---", nil_talk);
 	uxn_port(u, 0xf, (char *)"---", nil_talk);
 
-	/* Write screen size to dev/screen */
-	mempoke16(devscreen->dat, 2, ppu->width);
-	mempoke16(devscreen->dat, 4, ppu->height);
-	tft.println("Starting Uxn in 2 seconds");
+// 	/* Write screen size to dev/screen */
+// 	mempoke16(devscreen->dat, 2, ppu->width);
+// 	mempoke16(devscreen->dat, 4, ppu->height);
+	// tft.println("Starting Uxn in 2 seconds");
 	delay(2000);
 }
 
