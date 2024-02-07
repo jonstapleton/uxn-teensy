@@ -8,8 +8,8 @@
 
 #include <Wire.h>
 // #include <../teensy41_extram/extRAM_t4/src/extRAM_t4.h>
-#include <../teensy41_extram/SPIFFS_t4/src/spiffs_t4.h>
-#include <../teensy41_extram/SPIFFS_t4/src/spiffs.h>
+// #include <../teensy41_extram/SPIFFS_t4/src/spiffs_t4.h>
+// #include <../teensy41_extram/SPIFFS_t4/src/spiffs.h>
 
 spiffs_t4 eRAM;
 
